@@ -1,19 +1,15 @@
-FROM golang:1.22-alpine AS builder
-
+FROM docker.io/library/golang:1.22-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
-COPY vendor/ vendor/
+
+# Download dependencies inside the container instead of copying vendor
+RUN go mod download
+
 COPY . .
+RUN go build -o main .
 
-RUN go build -mod=vendor -o server .
-
-FROM alpine:latest
-
-RUN apk --no-cache add ca-certificates
-
+FROM docker.io/library/alpine:latest
 WORKDIR /app
-COPY --from=builder /app/server .
-COPY frontend/ frontend/
-
-EXPOSE 8080
-CMD ["./server"]
+RUN apk --no-cache add ca-certificates
+COPY --from=builder /app/main .
+CMD ["./main"]
